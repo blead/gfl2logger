@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+message GuildMembers {
+  repeated GuildMember members = 1;
+}
+
+message GuildMember {
+  Player player = 1;
+  int32 weekly_merit = 3;
+  int32 total_merit = 4;
+  int32 high_score = 5;
+  int32 total_score = 6;
+  int32 uid = 7;
+  int32 last_login = 8;
+}
+
+message Player {
+  PlayerInfo player_info = 1;
+}
+
+message PlayerInfo {
+  string name = 2;
+  int32 level = 3;
+}
