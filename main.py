@@ -4,14 +4,17 @@ import signal
 import sys
 
 from mitmproxy import master, options
-from mitmproxy.addons import next_layer, proxyserver, tlsconfig
+from mitmproxy.addons import next_layer, proxyserver
 
 from gfl2logger.export import addons
 
 
 def get_master() -> master.Master:
     opts = options.Options(
-        mode=["local:GF2_Exilium"], http2=False, http3=False, websocket=False
+        mode=["local:GF2_Exilium"],
+        http2=False,
+        http3=False,
+        websocket=False,
     )
     m = master.Master(
         opts,
@@ -20,7 +23,6 @@ def get_master() -> master.Master:
     m.addons.add(
         proxyserver.Proxyserver(),
         next_layer.NextLayer(),
-        tlsconfig.TlsConfig(),
     )
     m.addons.add(*addons)
     opts.update(termlog_verbosity="alert")

@@ -1,3 +1,6 @@
-from gfl2logger import logger
+from gfl2logger import ignore_tls, logger
 
-addons = [logger.GFL2Logger()]
+addons = [
+    ignore_tls.IgnoreTls(),
+    logger.GFL2Logger(),
+]
