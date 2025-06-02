@@ -33,7 +33,7 @@ There are currently no plans to support other platforms, but emulator is technic
 
 Support for other data can be added in the future especially if there are valid use cases for them. Mapping between different data is likely the next milestone for future releases.
 
-| Name | Description | Occurences | Log Format |
+| Name | Description | Occurrences | Log Format |
 | --- | --- | --- | --- |
 | `Weapons` | Weapons owned. | login | CSV |
 | `Attachments` | Attachments owned. | login | CSV |
