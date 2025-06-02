@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message CommonKeys {
+  repeated CommonKey keys = 1;
+}
+
+message CommonKey {
+  uint64 uid = 1;
+  uint32 key_id = 2;
+}

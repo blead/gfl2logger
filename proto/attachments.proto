@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+message Attachments {
+  repeated Attachment attachments = 1;
+}
+
+message Attachment {
+  uint64 uid = 1;
+  uint32 part_id = 2;
+  bool is_locked = 3;
+  uint64 weapon_uid = 4;
+  Effect effect = 14;
+  repeated Calibration calibrations = 18;
+  uint64 attributes = 20;
+}
+
+message Effect {
+  uint32 id = 1;
+}
+
+message Calibration {
+  uint32 boost = 4;
+}

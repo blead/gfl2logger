@@ -6,12 +6,12 @@ message GuildMembers {
 
 message GuildMember {
   Player player = 1;
-  int32 weekly_merit = 3;
-  int32 total_merit = 4;
-  int32 high_score = 5;
-  int32 total_score = 6;
-  int32 uid = 7;
-  int32 last_login = 8;
+  uint32 weekly_merit = 3;
+  uint32 total_merit = 4;
+  uint32 high_score = 5;
+  uint32 total_score = 6;
+  uint32 uid = 7;
+  uint32 last_login = 8;
 }
 
 message Player {
@@ -20,5 +20,5 @@ message Player {
 
 message PlayerInfo {
   string name = 2;
-  int32 level = 3;
+  uint32 level = 3;
 }

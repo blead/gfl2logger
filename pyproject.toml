@@ -15,10 +15,10 @@ distribution = false
 
 [tool.pdm.version]
 source = "call"
-getter = "gfl2logger.version:get_version"
+getter = "gfl2logger.utils.version:get_version"
 
 [tool.pdm.scripts]
-_.env = { PROTO_DIR = "proto", GENERATED_DIR = "generated", PROTO_FILES = "proto/guild_members.proto" }
+_.env = { PROTO_DIR = "proto", GENERATED_DIR = "generated", PROTO_FILES = "proto/*.proto" }
 pre_protoc.call = "os:makedirs('${GENERATED_DIR}', exist_ok=True)"
 protoc = "python -m grpc_tools.protoc --proto_path=${PROTO_DIR} --python_out=${GENERATED_DIR} --pyi_out=${GENERATED_DIR} ${PROTO_FILES}"
 pre_pyinstaller = "pdm run protoc"

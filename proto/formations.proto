@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+message FormationsResponse {
+  Formations formations = 1;
+}
+
+message Formations {
+  repeated Formation formations = 1;
+}
+
+message Formation {
+  string name = 1;
+  repeated Doll dolls = 2;
+}
+
+message Doll {
+  uint32 doll_id = 1;
+  uint64 weapon_uid = 2;
+  repeated uint64 attachment_uids = 3;
+  repeated uint32 fixed_key_ids = 4;
+  repeated uint32 expansion_key_ids = 5;
+  repeated uint64 common_key_uids = 6;
+}

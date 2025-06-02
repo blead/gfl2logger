@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+message Weapons {
+  repeated Weapon weapons = 1;
+}
+
+message Weapon {
+  uint32 id = 2;
+  uint32 level = 6;
+  uint32 rank = 8;
+  uint64 uid = 11; 
+}

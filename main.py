@@ -1,37 +1,17 @@
 import asyncio
 import logging
+import multiprocessing
 import signal
 import sys
 
-from mitmproxy import master, options
-from mitmproxy.addons import next_layer, proxyserver
+from mitmproxy import log
 
-from gfl2logger.export import addons
-
-
-def get_master() -> master.Master:
-    opts = options.Options(
-        mode=["local:GF2_Exilium"],
-        http2=False,
-        http3=False,
-        websocket=False,
-    )
-    m = master.Master(
-        opts,
-        with_termlog=True,
-    )
-    m.addons.add(
-        proxyserver.Proxyserver(),
-        next_layer.NextLayer(),
-    )
-    m.addons.add(*addons)
-    opts.update(termlog_verbosity="alert")
-    return m
+from gfl2logger.proxy.master import ProxyMaster
 
 
-async def run() -> master.Master:
-    logging.getLogger().setLevel(logging.INFO)
-    m = get_master()
+async def run() -> None:
+    logging.getLogger().setLevel(log.ALERT)
+    m = ProxyMaster()
     loop = asyncio.get_running_loop()
 
     def _sigint(*_):
@@ -51,7 +31,6 @@ async def run() -> master.Master:
         signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 
     await m.run()
-    return m
 
 
 def main() -> None:
@@ -59,4 +38,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     sys.exit(main())
