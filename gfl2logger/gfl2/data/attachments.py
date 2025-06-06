@@ -78,6 +78,7 @@ class AttachmentsData(BaseData):
                 yield {
                     "uid": row.get("uid"),
                     "name": ATTACHMENTS.get(part_id, {}).get("name", part_id),
+                    "rarity": ATTACHMENTS.get(part_id, {}).get("rarity"),
                     "type": ATTACHMENTS.get(part_id, {}).get("type"),
                     "effect": ATTACHMENT_EFFECTS.get(row.get("effect", {}).get("id")),
                     "isLocked": row.get("isLocked", False),
@@ -99,6 +100,7 @@ class AttachmentsData(BaseData):
         cols = [
             "uid",
             "name",
+            "rarity",
             "type",
             "effect",
             *["attr" + attr for attr in ATTRIBUTES_NAME_STRIPPED.values()],

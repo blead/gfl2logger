@@ -7,8 +7,11 @@ __pycache__/
 .pdm.toml
 .Python
 .venv
+*.config.yaml
+*.csv
 *.egg
 *.egg-info/
+*.json
 *.manifest
 *.py[cod]
 *.so
