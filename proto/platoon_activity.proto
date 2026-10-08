@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+message PlatoonActivityResponse {
+  repeated PlatoonObjective objectives = 1;
+  repeated PlatoonActivityEntry entries = 2;
+}
+
+message PlatoonObjective {
+  uint64 uid = 1;
+  uint32 activity_id = 2;
+  uint32 updated_at = 3;
+  uint32 state = 4;
+}
+
+message PlatoonActivityEntry {
+  uint64 uid = 1;
+  uint32 action = 2;
+  uint32 occurred_at = 3;
+  uint32 activity_id = 4;
+  string member_name = 5;
+}

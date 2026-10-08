@@ -8,13 +8,19 @@ from gfl2logger.gfl2.data.base import BaseData
 from gfl2logger.gfl2.data.common_keys import CommonKeysData
 from gfl2logger.gfl2.data.formations import FormationsData
 from gfl2logger.gfl2.data.guild_members import GuildMembersData
+from gfl2logger.gfl2.data.platoon_activity import PlatoonActivityData
+from gfl2logger.gfl2.data.platoon_profile import PlatoonProfileData
+from gfl2logger.gfl2.data.platoon_updates import PlatoonUpdatesData
 from gfl2logger.gfl2.data.weapons import WeaponsData
 
 DATA_TYPES: dict[int, type[BaseData]] = {
+    21905: PlatoonProfileData,
+    21917: GuildMembersData,
+    21935: PlatoonActivityData,
+    21960: PlatoonUpdatesData,
     11021: WeaponsData,
     11061: AttachmentsData,
     11138: CommonKeysData,
-    21917: GuildMembersData,
     23201: FormationsData,
 }
 

@@ -1,9 +1,10 @@
 import functools
 import multiprocessing
+import queue
 import signal
-import threading
+import sys
 import tkinter
-from ctypes import windll
+import ctypes
 from idlelib import tooltip
 from tkinter import ttk
 
@@ -14,6 +15,9 @@ from gfl2logger.gui.log_window import LogWindow
 
 logger = multiprocessing.get_logger()
 
+POLL_INTERVAL_MS = 50
+MAX_COMMANDS_PER_POLL = 100
+
 
 class TkWindow(tkinter.Tk):
     def __init__(self, from_gui: "multiprocessing.Queue[Command]"):
@@ -21,10 +25,11 @@ class TkWindow(tkinter.Tk):
         self.active = True
         self.options: dict[str, tkinter.Variable] = {}
 
-        try:
-            windll.shcore.SetProcessDpiAwareness(1)
-        except Exception:
-            pass
+        if windll := getattr(ctypes, "windll", None):
+            try:
+                windll.shcore.SetProcessDpiAwareness(1)
+            except Exception:
+                pass
 
         super().__init__()
         self.title("gfl2logger")
@@ -33,17 +38,45 @@ class TkWindow(tkinter.Tk):
         if ICON_PNG is not None:
             self.iconphoto(True, tkinter.PhotoImage(data=ICON_PNG))
 
-        # exit flow: (tk) self.quit -> (tk) from_gui:SHUTDOWN
-        #   -> (main) master.shutdown -> (main) manager.done -> (main) to_gui:SHUTDOWN
-        #   -> (tk thread) <<Destroy>> -> (tk) self.destroy
+        # Closing the window ends the program: quit() tells the proxy process and then
+        # closes at once without waiting for an answer. The proxy shuts down on that
+        # message, or on noticing this process is gone, and force-exits if that stalls.
+        # A shutdown started by the proxy arrives through pump() as SHUTDOWN instead.
         self.protocol("WM_DELETE_WINDOW", self.quit)
-        self.bind("<<Destroy>>", self.destroy)
+        if sys.platform == "darwin":
+            # Cmd+Q and the Dock's Quit make Tk exit on the spot by default, which skips
+            # the shutdown exchange with the proxy process. Route them through quit().
+            self.createcommand("::tk::mac::Quit", self.quit)
 
         opt_frame = ttk.Frame(self, padding=10)
         opt_frame.pack(side="left", fill="y")
+        style = ttk.Style(self)
+        style.configure("OptionGroup.TLabel", foreground="dim gray")
+
+        current_category = None
         for opt in data.get_options():
             if "name" not in opt:
                 continue
+
+            category = opt.get("category", "Options")
+            if category != current_category:
+                header = ttk.Frame(opt_frame)
+                header.pack(
+                    fill="x",
+                    pady=(0 if current_category is None else 10, 4),
+                )
+                header.columnconfigure(0, weight=1)
+                header.columnconfigure(2, weight=1)
+                ttk.Separator(header).grid(row=0, column=0, sticky="ew")
+                ttk.Label(
+                    header,
+                    text=category,
+                    anchor="center",
+                    style="OptionGroup.TLabel",
+                ).grid(row=0, column=1, padx=7)
+                ttk.Separator(header).grid(row=0, column=2, sticky="ew")
+                current_category = category
+
             match opt.get("default"):
                 case bool():
                     self.options[opt["name"]] = tkinter.BooleanVar(
@@ -84,16 +117,39 @@ class TkWindow(tkinter.Tk):
                 self.options[opt].set(options[opt])
 
     def quit(self) -> None:
-        self.withdraw()
+        if not self.active:
+            return
+        self.active = False
         self.from_gui.put(Command(CommandType.SHUTDOWN, None))
+        self.destroy()
 
     def destroy(self, *_) -> None:
         super().destroy()
 
 
-def loop(window: TkWindow, to_gui: multiprocessing.Queue) -> None:
-    while window.active:
-        cmd = to_gui.get()
+def parent_is_alive() -> bool:
+    parent = multiprocessing.parent_process()
+    return parent is None or parent.is_alive()
+
+
+def pump(window: TkWindow, to_gui: "multiprocessing.Queue[Command]") -> None:
+    """Apply queued commands on the Tk main thread.
+
+    Tk must only be driven from the thread that created it, which matters most on
+    macOS, so the queue is polled from a timer instead of a reader thread.
+    """
+    if not parent_is_alive():
+        # The proxy is gone, so nothing will ever answer SHUTDOWN: closing the window
+        # would only hide it and leave this process behind.
+        window.active = False
+        window.destroy()
+        return
+
+    for _ in range(MAX_COMMANDS_PER_POLL):
+        try:
+            cmd = to_gui.get_nowait()
+        except queue.Empty:
+            break
         match cmd.type:
             case CommandType.LOG:
                 window.rpc_write_log(cmd.content)
@@ -101,12 +157,14 @@ def loop(window: TkWindow, to_gui: multiprocessing.Queue) -> None:
                 window.rpc_set_options(cmd.content)
             case CommandType.SHUTDOWN:
                 window.active = False
-                window.event_generate("<<Destroy>>")
-                break
+                window.destroy()
+                return
             case _:
                 logger.warning(
                     f"Unrecognized command to gui, cmd.type={cmd.type}, cmd.content={cmd.content}"
                 )
+
+    window.after(POLL_INTERVAL_MS, pump, window, to_gui)
 
 
 def draw_window(
@@ -124,7 +182,5 @@ def draw_window(
     signal.signal(signal.SIGINT, _sigint)
     signal.signal(signal.SIGTERM, _sigterm)
 
-    t = threading.Thread(target=loop, args=(window, to_gui), daemon=True)
-    t.start()
+    window.after(0, pump, window, to_gui)
     window.mainloop()
-    t.join(timeout=3)

@@ -8,12 +8,13 @@ class LogWindow(ScrolledText):
         self.configure(state="disabled")
 
     def write(self, msg) -> None:
-        lines = int(self.index("end - 1 line").split(".")[0])
         self.configure(state="normal")
-        if lines > self.maxlines:
-            self.delete(1.0, 2.0)
         if self.index("end-1c") != "1.0":
             self.insert("end", "\n")
         self.insert("end", msg)
+        # One record can span several lines, so trim by the real overflow.
+        excess = int(self.index("end-1c").split(".")[0]) - self.maxlines
+        if excess > 0:
+            self.delete("1.0", f"{excess + 1}.0")
         self.configure(state="disabled")
         self.see("end")

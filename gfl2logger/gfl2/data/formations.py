@@ -1,11 +1,10 @@
 import asyncio
-import json
 import logging
 from collections.abc import Generator, Iterable
 from typing import Any
 
 from google.protobuf import json_format
-from mitmproxy import ctx, log
+from mitmproxy import ctx
 
 from embed import DOLLS, KEYS
 from generated.formations_pb2 import FormationsResponse
@@ -19,6 +18,7 @@ class FormationsData(BaseData):
         {
             "name": "gfl2_formations",
             "label": "Formations",
+            "category": "Others",
             "typespec": bool,
             "default": True,
             "help": "Log Formations on login",
@@ -60,7 +60,7 @@ class FormationsData(BaseData):
 
     def to_dicts(self) -> Generator[dict[str, Any]]:
         for data in self.to_raw_dicts():
-            for row in data["formations"]["formations"]:
+            for row in data.get("formations", {}).get("formations", []):
                 output = {
                     "name": row.get("name"),
                     "dolls": list(FormationsData.map_dolls(row.get("dolls", []))),
@@ -68,14 +68,4 @@ class FormationsData(BaseData):
                 yield {k: output[k] for k in output if output[k]}
 
     def to_json(self) -> None:
-        filename = (
-            f"gfl2logger_formations_{self.log_time.strftime('%Y%m%dT%H%M%SZ')}.json"
-        )
-        data = list(self.to_dicts())
-
-        try:
-            with open(filename, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            logger.log(log.ALERT, f"Formations data written to {filename}")
-        except OSError as e:
-            logger.error(f"Failed to write to {filename}, error={e}")
+        self.write_json("formations", "Formations", list(self.to_dicts()))

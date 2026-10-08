@@ -3,18 +3,50 @@ name: release
 on:
   push:
     tags:
-    - 'v[0-9].[0-9].[0-9]*'
+      - "v*.*.*"
+
+permissions:
+  contents: read
 
 jobs:
-  release:
-    runs-on: windows-latest
+  verify-version:
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: pdm-project/setup-pdm@v4
-      with:
-        cache: true
-    - run: pdm install
-    - run: pdm run pyinstaller
-    - uses: softprops/action-gh-release@v2
-      with:
-        files: dist/*
+      - uses: actions/checkout@v4
+      # The app reports the version from version.py, so it has to match the tag.
+      - run: |
+          tag="${GITHUB_REF_NAME}"
+          grep -qx "VERSION = \"${tag#v}\"" gfl2logger/utils/version.py
+
+  build:
+    needs: verify-version
+    uses: ./.github/workflows/build.yml
+    with:
+      version-label: ${{ github.ref_name }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      # RELEASE_NOTES.md links to the downloads relative to the repository so the file
+      # works in any fork; a release body needs absolute links.
+      - name: Point release note links at this repository
+        run: sed "s#](\.\./\.\./#](https://github.com/${GITHUB_REPOSITORY}/#g" RELEASE_NOTES.md > release-body.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body_path: release-body.md
+          files: |
+            release/gfl2logger-${{ github.ref_name }}-windows-x64.zip
+            release/gfl2logger-${{ github.ref_name }}-macos-arm64.zip
+            release/gfl2logger-${{ github.ref_name }}-macos-arm64.dmg
+          overwrite_files: false
+          fail_on_unmatched_files: true

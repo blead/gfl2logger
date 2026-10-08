@@ -1,11 +1,10 @@
 import asyncio
-import csv
 import logging
 from collections.abc import Generator
 from typing import Any
 
 from google.protobuf import json_format
-from mitmproxy import ctx, log
+from mitmproxy import ctx
 
 from embed import WEAPONS
 from generated.weapons_pb2 import Weapons
@@ -19,6 +18,7 @@ class WeaponsData(BaseData):
         {
             "name": "gfl2_weapons",
             "label": "Weapons",
+            "category": "Others",
             "typespec": bool,
             "default": True,
             "help": "Log weapons on login",
@@ -38,7 +38,7 @@ class WeaponsData(BaseData):
 
     def to_dicts(self) -> Generator[dict[str, Any]]:
         for data in self.to_raw_dicts():
-            for row in data["weapons"]:
+            for row in data.get("weapons", []):
                 yield {
                     "uid": row.get("uid"),
                     "name": WEAPONS.get(row.get("id")),
@@ -47,20 +47,10 @@ class WeaponsData(BaseData):
                 }
 
     def to_csv(self) -> None:
-        filename = f"gfl2logger_weapons_{self.log_time.strftime('%Y%m%dT%H%M%SZ')}.csv"
         cols = [
             "uid",
             "name",
             "level",
             "rank",
         ]
-        data = self.to_dicts()
-
-        try:
-            with open(filename, "w", encoding="utf-8", newline="") as f:
-                writer = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
-                writer.writeheader()
-                writer.writerows(data)
-            logger.log(log.ALERT, f"Weapons data written to {filename}")
-        except OSError as e:
-            logger.error(f"Failed to write to {filename}, error={e}")
+        self.write_csv("weapons", "Weapons", cols, self.to_dicts())

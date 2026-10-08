@@ -25,12 +25,19 @@ class GFL2Logger:
         self.active_flows[flow] = GFL2Parser()
 
     async def tcp_message(self, flow: tcp.TCPFlow) -> None:
+        if not flow.messages:
+            return
+        message = flow.messages[-1]
+        # mitmproxy appends every TCP message to the flow and never trims it. The game
+        # keeps one connection open for the whole session, so holding on to them would
+        # grow memory for as long as the logger runs. The proxy forwards the message from
+        # its own reference, not from this list.
+        flow.messages.clear()
+
         parser = self.active_flows.get(flow)
         if parser is None:
             logger.warning("Message not in active flow")
             return
-
-        message = flow.messages[-1]
 
         # TODO: parse client/server messages separately; currently we just ignore client
         if not message.from_client:

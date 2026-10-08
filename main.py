@@ -6,10 +6,14 @@ import sys
 
 from mitmproxy import log
 
-from gfl2logger.proxy.master import ProxyMaster
-
 
 async def run() -> None:
+    # Keep this import after multiprocessing.freeze_support() has run.  Importing
+    # ProxyMaster constructs the GUI manager and its multiprocessing queues; in a
+    # frozen macOS app, doing that during resource-tracker bootstrap recursively
+    # launches more copies of the executable.
+    from gfl2logger.proxy.master import ProxyMaster
+
     logging.getLogger().setLevel(log.ALERT)
     m = ProxyMaster()
     loop = asyncio.get_running_loop()

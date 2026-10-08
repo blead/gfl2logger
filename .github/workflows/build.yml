@@ -1,0 +1,72 @@
+name: build
+
+# Reusable build: runs the tests and packages the app on every supported platform.
+on:
+  workflow_call:
+    inputs:
+      version-label:
+        description: Text placed in artifact file names, such as a release tag.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows-x64
+          - os: macos-15
+            platform: macos-arm64
+    runs-on: ${{ matrix.os }}
+    env:
+      VERSION_LABEL: ${{ inputs.version-label }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pdm-project/setup-pdm@v4
+        with:
+          cache: true
+      - run: pdm install
+      # The tests import the generated protobuf modules, which are not checked in.
+      - run: pdm run protoc
+      - name: Run tests
+        run: pdm run python -m unittest discover -s tests -v
+        env:
+          # Hosted runners have a desktop session, so the real window can be exercised.
+          GFL2LOGGER_GUI_TESTS: "1"
+      - run: pdm run pyinstaller
+      - name: Start and close the packaged app
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            pdm run python .github/scripts/smoke_frozen.py dist/gfl2logger/gfl2logger.exe
+          else
+            pdm run python .github/scripts/smoke_frozen.py dist/gfl2logger.app/Contents/MacOS/gfl2logger
+          fi
+      - name: Package Windows artifact
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          test -e dist/gfl2logger/_internal/mitmproxy_windows/WinDivert64.sys
+          mkdir -p release
+          (cd dist && pdm run python -m zipfile -c "../release/gfl2logger-${VERSION_LABEL}-windows-x64.zip" gfl2logger)
+      - name: Package macOS artifacts
+        if: runner.os == 'macOS'
+        run: |
+          test -e "dist/gfl2logger.app/Contents/Resources/mitmproxy_macos/Mitmproxy Redirector.app.tar"
+          codesign --verify --deep --strict dist/gfl2logger.app
+          mkdir -p release dist/dmg-root
+          (cd dist && COPYFILE_DISABLE=1 zip -qry "../release/gfl2logger-${VERSION_LABEL}-macos-arm64.zip" gfl2logger.app -x '*.DS_Store' -x '__MACOSX/*')
+          cp -R dist/gfl2logger.app dist/dmg-root/
+          ln -s /Applications dist/dmg-root/Applications
+          hdiutil create -volname gfl2logger -srcfolder dist/dmg-root -ov -format UDZO "release/gfl2logger-${VERSION_LABEL}-macos-arm64.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gfl2logger-${{ matrix.platform }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14

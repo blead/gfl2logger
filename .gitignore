@@ -6,6 +6,7 @@ __pycache__/
 .pdm-python
 .pdm.toml
 .Python
+.DS_Store
 .venv
 *.config.yaml
 *.csv
